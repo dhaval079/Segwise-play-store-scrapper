@@ -1,4 +1,5 @@
 const { NlpManager } = require('node-nlp');
+const gameConfig = require('../config/game');
 
 class ReviewClassifier {
   constructor() {
@@ -9,53 +10,38 @@ class ReviewClassifier {
   async init() {
     if (this.initialized) return;
 
-    const trainingData = {
-      crashes: [
-        'app keeps crashing',
-        'crashes every time',
-        'force close',
-        'stops working',
-        'app crashed',
-        'application crash',
-        'keeps stopping'
-      ],
-      bugs: [
-        'found a bug',
-        'this feature is broken',
-        'not working properly',
-        'glitch',
-        'bug in the game',
-        'something is wrong',
-        'broken functionality'
-      ],
-      complaints: [
-        'poor performance',
-        'terrible app',
-        'bad experience',
-        'waste of time',
-        'too many ads',
-        'not worth it',
-        'disappointed'
-      ],
-      praises: [
-        'great app',
-        'love this game',
-        'awesome experience',
-        'best game ever',
-        'fantastic app',
-        'wonderful game',
-        'excellent'
-      ]
-    };
-
-    Object.entries(trainingData).forEach(([category, phrases]) => {
-      phrases.forEach(phrase => {
-        this.manager.addDocument('en', phrase, category);
+    Object.entries(gameConfig.classificationKeywords).forEach(([category, keywords]) => {
+      keywords.forEach(keyword => {
+        this.manager.addDocument('en', keyword, category);
+        this.manager.addDocument('en', `${keyword}!`, category);
+        this.manager.addDocument('en', `${keyword}.`, category);
+        this.manager.addDocument('en', `the game ${keyword}`, category);
+        this.manager.addDocument('en', `this game ${keyword}`, category);
+        this.manager.addDocument('en', `game ${keyword}`, category);
+        
+        if (category === 'bugs' || category === 'crashes') {
+          this.manager.addDocument('en', `${keyword} after update`, category);
+          this.manager.addDocument('en', `${keyword} on level`, category);
+          this.manager.addDocument('en', `${keyword} when playing`, category);
+        }
       });
     });
 
+    this.manager.addDocument('en', 'dice not rolling', 'bugs');
+    this.manager.addDocument('en', 'lost my progress', 'complaints');
+    this.manager.addDocument('en', 'lost all my dice', 'complaints');
+    this.manager.addDocument('en', 'disappeared coins', 'complaints');
+    this.manager.addDocument('en', 'cant attack', 'bugs');
+    this.manager.addDocument('en', "can't roll", 'bugs');
+    this.manager.addDocument('en', 'rolls not working', 'bugs');
+    this.manager.addDocument('en', 'village gone', 'complaints');
+    this.manager.addDocument('en', 'love rolling dice', 'praises');
+    this.manager.addDocument('en', 'fun attacking', 'praises');
+
+    console.log('Training review classifier...');
     await this.manager.train();
     this.initialized = true;
+    console.log('Review classifier training completed');
   }
 
   async classify(text) {
@@ -63,11 +49,15 @@ class ReviewClassifier {
       await this.init();
     }
 
-    const result = await this.manager.process('en', text);
-    if (result.intent && result.score > 0.6) {
-      return result.intent;
+    try {
+      const result = await this.manager.process('en', text.toLowerCase());      if (result.intent && result.score > 0.6) {
+        return result.intent;
+      }
+      return 'other';
+    } catch (error) {
+      console.error('Error classifying review:', error);
+      return 'other';
     }
-    return 'other';
   }
 }
 

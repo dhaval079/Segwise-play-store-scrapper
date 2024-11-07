@@ -1,3 +1,4 @@
+// src/app.js
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -5,7 +6,7 @@ const cron = require('node-cron');
 const path = require('path');
 
 const Review = require('./models/Review');
-const PlayStoreReviewFetcher = require('./services/reviewFetcher');
+const MockReviewFetcher = require('./services/reviewFetcher');
 const classifier = require('./services/classifier');
 const apiRoutes = require('./routes/api');
 
@@ -18,21 +19,14 @@ app.use(express.static('public'));
 // Routes
 app.use('/api', apiRoutes);
 
-// Serve frontend
-app.get('/', (req, res) => {
-  res.sendFile(path.join("C://Users//rupap//.vscode//SegWise//play-store-reviews//public//index.html"));
-});
-
 // Review scraping function
 async function scrapeReviews() {
   try {
     console.log('Starting review scrape...');
-    const fetcher = new PlayStoreReviewFetcher(
-      process.env.GOOGLE_CREDENTIALS_PATH,
-      process.env.PACKAGE_NAME
-    );
     
+    const fetcher = new MockReviewFetcher();
     const reviews = await fetcher.fetchLast7DaysReviews();
+    
     console.log(`Fetched ${reviews.length} reviews`);
     
     for (const review of reviews) {
@@ -55,26 +49,31 @@ async function scrapeReviews() {
 // Schedule daily scraping
 cron.schedule('0 0 * * *', scrapeReviews);
 
-// Database connection
-mongoose.connect("mongodb+srv://dhaval079:eren679999@cluster0.rm7on6v.mongodb.net/SegWise")
+// MongoDB connection
+mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Initialize
 async function init() {
-  // Initialize classifier
-  await classifier.init();
-  
-  // Initial scrape
-  await scrapeReviews();
-  
-  // Start server
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+  try {
+    // Initialize classifier
+    await classifier.init();
+    
+    // Initial scrape
+    await scrapeReviews();
+    
+    // Start server
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Initialization error:', error);
+    process.exit(1);
+  }
 }
 
-init().catch(console.error);
+init();
 
 module.exports = app;
