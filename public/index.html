@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Play Store Reviews Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .controls input, .controls select, .controls button {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .controls button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .controls button:hover {
+            background-color: #0056b3;
+        }
+        .summary {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .reviews {
+            display: grid;
+            gap: 15px;
+        }
+        .review {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+        }
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        .rating {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .stars {
+            color: #ffc107;
+        }
+        .trend {
+            margin: 20px 0;
+        }
+        .chart-container {
+            height: 300px;
+            margin: 20px 0;
+        }
+        .category-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .category-bugs { background-color: #ffcdd2; color: #c62828; }
+        .category-complaints { background-color: #fff9c4; color: #f57f17; }
+        .category-crashes { background-color: #ffccbc; color: #d84315; }
+        .category-praises { background-color: #c8e6c9; color: #2e7d32; }
+        .category-other { background-color: #f5f5f5; color: #616161; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Play Store Reviews Dashboard</h1>
+        
+        <div class="controls">
+            <input type="date" id="dateSelect">
+            <select id="categorySelect">
+                <option value="">All Categories</option>
+                <option value="bugs">Bugs</option>
+                <option value="complaints">Complaints</option>
+                <option value="crashes">Crashes</option>
+                <option value="praises">Praises</option>
+                <option value="other">Other</option>
+            </select>
+            <button onclick="searchReviews()">Search</button>
+        </div>
+
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+        </div>
+        <div class="reviews" id="reviews"></div>
+    </div>
+
+    <script>
+        let trendChart = null;
+
+        // Set default date to today
+        document.getElementById('dateSelect').valueAsDate = new Date();
+
+        function getStarsHTML(rating) {
+            return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString();
+        }
+
+        function displayStats(data) {
+            const statsGrid = document.getElementById('statsGrid');
+            const categoryCounts = data.categorySummary.reduce((acc, cat) => {
+                acc[cat._id] = cat.count;
+                return acc;
+            }, {});
+
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${data.totalCount}</div>
+                    <div class="stat-label">Total Reviews</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${categoryCounts.bugs || 0}</div>
+                    <div class="stat-label">Bugs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${categoryCounts.crashes || 0}</div>
+                    <div class="stat-label">Crashes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${categoryCounts.praises || 0}</div>
+                    <div class="stat-label">Praises</div>
+                </div>
+            `;
+        }
+
+        function displayTrend(trend) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            if (trendChart) {
+                trendChart.destroy();
+            }
+
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: trend.map(t => t._id),
+                    datasets: [{
+                        label: 'Number of Reviews',
+                        data: trend.map(t => t.count),
+                        borderColor: '#007bff',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayReviews(reviews) {
+            const reviewsContainer = document.getElementById('reviews');
+            reviewsContainer.innerHTML = reviews.map(review => `
+                <div class="review">
+                    <div class="review-header">
+                        <span class="rating">
+                            <span class="stars">${getStarsHTML(review.rating)}</span>
+                            <span>${review.rating}/5</span>
+                        </span>
+                        <span class="category-badge category-${review.category}">${review.category}</span>
+                        <span>${formatDate(review.date)}</span>
+                    </div>
+                    <div class="review-content">${review.content}</div>
+                    <div class="review-meta">
+                        <small>
+                            Version: ${review.appVersionName || 'N/A'} | 
+                            Device: ${review.androidOsVersion || 'N/A'}
+                        </small>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function searchReviews() {
+            const date = document.getElementById('dateSelect').value;
+            const category = document.getElementById('categorySelect').value;
+            
+            try {
+                const response = await fetch(`/api/reviews?date=${date}${category ? `&category=${category}` : ''}`);
+                const data = await response.json();
+                
+                displayStats(data);
+                displayTrend(data.trend);
+                displayReviews(data.reviews);
+            } catch (error) {
+                console.error('Error fetching reviews:', error);
+                alert('Error fetching reviews. Please try again.');
+            }
+        }
+
+        // Initial load
+        searchReviews();
+    </script>
+</body>
+</html>
