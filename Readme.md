@@ -272,12 +272,7 @@ MongoDB schema design:
   * Lower latency
 
 ## Credits
-* Built by: [Your Name]
-* **Tools Used:**
-  * ChatGPT for code assistance
-  * Google Play Developer API documentation
-  * node-nlp documentation
-  * Chart.js for visualizations
+* Built by: Dhaval Rupapara
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
