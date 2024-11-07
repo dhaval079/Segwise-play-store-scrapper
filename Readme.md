@@ -1,6 +1,7 @@
 # Play Store Reviews Dashboard
 
-## Deployment : https://segwise-play-store-scrapper-production.up.railway.app/
+## Deployment
+# https://segwise-play-store-scrapper-production.up.railway.app/
 
 ## Table of Contents
 * [Overview](#overview)
@@ -16,12 +17,11 @@
 * [Development Choices](#development-choices)
 * [Credits](#credits)
 
+# Database
+![segwise](./segwise.png)
+
 ## Overview
 This project is a Play Store review monitoring dashboard that helps game developers track and analyze their app reviews. It automatically scrapes reviews daily, classifies them into categories using natural language processing, and provides a simple interface to search and analyze the data.
-
-### Live Demo
-* Deployed URL: [Your deployed URL here]
-* Test Credentials: [If applicable]
 
 ## Features
 * **Automated Review Scraping**
