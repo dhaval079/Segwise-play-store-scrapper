@@ -1,5 +1,7 @@
 # Play Store Reviews Dashboard
 
+## Deployment : https://segwise-play-store-scrapper-production.up.railway.app/
+
 ## Table of Contents
 * [Overview](#overview)
 * [Features](#features)
